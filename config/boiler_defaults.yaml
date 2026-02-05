@@ -1,0 +1,13 @@
+camera:
+  ip: "192.168.144.25"
+  port: 37260
+
+thermal:
+  emissivity: 0.88
+  ambient_temp: 60.0 # °C inside boiler
+  humidity: 0.60 # 60%
+  reflected_temp: 60.0 # usually same as ambient
+
+distance:
+  initial: 5.0 # meters
+  update_threshold: 1.0 # meters
