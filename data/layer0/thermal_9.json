@@ -1,0 +1,9 @@
+{
+  "frame_id": 9,
+  "timestamp": 1770276766.3855598,
+  "emissivity": 0.88,
+  "distance": 5.0,
+  "ambient_temp": 60.0,
+  "humidity": 0.6,
+  "correction_enabled": true
+}

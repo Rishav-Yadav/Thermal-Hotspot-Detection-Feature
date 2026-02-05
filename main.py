@@ -5,4 +5,4 @@ if __name__=="__main__":
 
   for _ in range(10):
     frame = layer0.next_frame()
-  print(f"Frame {frame.frame_id} | " f"Max Temp :{frame.temperature_matrix.max():.2f} °C")
+    print(f"Frame {frame.frame_id} | " f"Max Temp :{frame.temperature_matrix.max():.2f} °C")
