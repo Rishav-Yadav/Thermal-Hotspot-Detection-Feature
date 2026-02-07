@@ -52,12 +52,13 @@ def _resolve_input_paths(base_dir: Path) -> tuple[list[Path], list[Path]]:
 
 
 def _load_thermal_frame(path: Path) -> np.ndarray:
-    """Load a thermal TIFF, using the first page if multi-page."""
-    thermal = tifffile.imread(path)
-    if thermal.ndim == 3:
-        thermal = thermal[0]
+    """Load a thermal TIFF, using only the first page if multi-page."""
+    # Use TiffFile for explicit page handling (first page only).
+    with tifffile.TiffFile(path) as tif:
+        thermal = tif.pages[0].asarray()
     if thermal.ndim != 2:
         raise ValueError(f"Thermal frame at {path} must be 2D, got shape {thermal.shape}")
+    # Ensure float32 without rescaling or normalization.
     if thermal.dtype != np.float32:
         thermal = thermal.astype(np.float32, copy=False)
     return thermal
@@ -65,6 +66,7 @@ def _load_thermal_frame(path: Path) -> np.ndarray:
 
 def _load_rgb_frame(path: Path) -> np.ndarray:
     """Load an RGB image (kept in OpenCV BGR order)."""
+    # OpenCV returns BGR by default; keep as-is for downstream drawing.
     rgb = cv2.imread(str(path), cv2.IMREAD_COLOR)
     if rgb is None:
         raise FileNotFoundError(f"Failed to read RGB image at {path}")
@@ -72,6 +74,7 @@ def _load_rgb_frame(path: Path) -> np.ndarray:
 
 
 def main() -> None:
+    # Resolve paths relative to this script for portability.
     base_dir = Path(__file__).resolve().parent
     thermal_paths, rgb_paths = _resolve_input_paths(base_dir)
 
@@ -85,8 +88,10 @@ def main() -> None:
     for frame_idx, (thermal_path, rgb_path) in enumerate(
         zip(thermal_paths, rgb_paths)
     ):
+        # Load thermal and RGB frames in matching order.
         thermal_frame = _load_thermal_frame(thermal_path)
 
+        # Wrap thermal data in the pipeline's expected metadata container.
         thermal_meta = ThermalFrame(
             frame_id=frame_idx,
             timestamp=time.time(),
@@ -98,9 +103,11 @@ def main() -> None:
             correction_enabled=False,
         )
 
+        # Layer 1: conditioning.
         conditioned = layer1.process(thermal_meta)
         conditioned_matrix = conditioned.temperature_matrix
 
+        # Layer 2: ΔT hotspot detection (frozen).
         rois = detector.process_frame(conditioned_matrix)
         roi_dicts = [
             {
@@ -114,6 +121,7 @@ def main() -> None:
             for roi in rois
         ]
 
+        # Layer 3: tracking + annotation.
         rgb_frame = _load_rgb_frame(rgb_path)
         tracker.update(roi_dicts, frame_idx)
         annotated = tracker.draw(rgb_frame.copy())
@@ -131,6 +139,7 @@ def main() -> None:
             len(rois),
         )
 
+        # Persist annotated output for inspection.
         output_path = output_dir / f"annotated_frame_{frame_idx}.png"
         if not cv2.imwrite(str(output_path), annotated):
             raise IOError(f"Failed to write annotated output to {output_path}")
