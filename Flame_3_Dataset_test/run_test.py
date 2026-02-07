@@ -31,12 +31,14 @@ def _resolve_input_paths(base_dir: Path) -> tuple[list[Path], list[Path]]:
     rgb_dir = base_dir / "data" / "rgb"
 
     thermal_paths = sorted(
-        list(thermal_dir.glob("*.tif")) + list(thermal_dir.glob("*.tiff"))
+        path
+        for path in thermal_dir.iterdir()
+        if path.is_file() and path.suffix.lower() in {".tif", ".tiff"}
     )
     rgb_paths = sorted(
-        list(rgb_dir.glob("*.png"))
-        + list(rgb_dir.glob("*.jpg"))
-        + list(rgb_dir.glob("*.jpeg"))
+        path
+        for path in rgb_dir.iterdir()
+        if path.is_file() and path.suffix.lower() in {".png", ".jpg", ".jpeg"}
     )
 
     if len(thermal_paths) != 2:
